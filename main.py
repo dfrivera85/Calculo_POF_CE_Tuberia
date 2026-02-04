@@ -50,8 +50,22 @@ def run_simulation(dfs, ili_date, target_date, tolerances_df, detection_threshol
         
         # Predict for ALL rows (to fill gaps where ILI = 0)
         # We only really need it where depth is 0/NaN, but let's predict all for Parity Plot
-        all_predictions = estimator.predict(master_df)
-        master_df['pred_depth_ml'] = all_predictions
+        raw_predictions = estimator.predict(master_df)
+        
+        # Apply Physical Restrictions (Censoring)
+        # upper = detection_threshold * thickness
+        # We iterate to apply the specific threshold per joint
+        thicknesses = master_df['espesor'].fillna(0).values
+        adjusted_preds = []
+        
+        for pred, thick in zip(raw_predictions, thicknesses):
+            limit_mm = detection_threshold * thick
+            # Get the adjusted mean ('mu') from the restrictions logic
+            # returns dict {'mu': ..., ...}
+            res = estimator.apply_physical_restrictions(pred, limit_mm)
+            adjusted_preds.append(res['mu'])
+            
+        master_df['pred_depth_ml'] = adjusted_preds
         
         # Save feature importance if available
         if hasattr(estimator.model, 'feature_importances_'):
@@ -117,7 +131,7 @@ def run_simulation(dfs, ili_date, target_date, tolerances_df, detection_threshol
     # "General | 10%". This implies 10% of Depth.
     # Let's assume StdDev = Value * Depth.
     
-    ili_std_devs = ili_tols_fraction * master_df['profundidad_mm'].values
+    ili_std_devs = ili_tols_fraction * master_df['espesor'].values
     
     # 3. ML Data (where no field and no ILI)
     # Censored Logic (Truncated Normal) occurs here?
@@ -236,6 +250,18 @@ def run_simulation(dfs, ili_date, target_date, tolerances_df, detection_threshol
     # Combine History
     full_results = pd.concat(pof_history, ignore_index=True)
     results['pof_results'] = full_results
+    
+    # --- ADD POF COLUMNS TO MASTER_DF ---
+    # We want columns: POF_2023, POF_2024, etc.
+    # pof_history is a list of DataFrames per year.
+    # Each snapshot matches master_df by index (since we used master_df.index)
+    
+    for snapshot in pof_history:
+        year = snapshot['Year'].iloc[0]
+        # Ensure alignment by index
+        master_df[f'POF_{year}'] = snapshot['POF'].values
+
+    results['master_df'] = master_df
     
     logging.info("Simulation Complete.")
     return results

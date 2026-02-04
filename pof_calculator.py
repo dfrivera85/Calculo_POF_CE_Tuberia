@@ -12,7 +12,14 @@ def calculate_hoop_stress(pressure, diameter, thickness):
     """
     Calculates Hoop Stress (Barlow's formula approximation).
     Sigma_h = (P * D) / (2 * t)
-    Assumes Pressure in MPa, Result in MPa.
+    
+    Args:
+        pressure: Internal Pressure in PSI.
+        diameter: Pipe Diameter in mm.
+        thickness: Wall Thickness in mm.
+        
+    Returns:
+        Hoop Stress in PSI.
     """
     return (pressure * diameter) / (2 * thickness)
 
@@ -43,8 +50,8 @@ def calculate_critical_depth(hoop_stress, flow_stress, thickness, folias_factor)
     # Let's stick to the algebraic inversion:
     # d_crit = (t / 0.85) * numerator / denominator
     
-    raw_d_crit = (thickness / 0.85) * (numerator / denominator)
-    
+    ##raw_d_crit = (thickness / 0.85) * (numerator / denominator)
+    raw_d_crit = ((hoop_stress-flow_stress)*thickness)/(((hoop_stress/folias_factor)-flow_stress)*0.85)
     # If raw_d_crit is negative or > t, handle it.
     # If denominator is positive (unlikely for normal operation unless Hoop/M > Flow), it implies burst.
     # Standard usage: Denominator is usually negative (Hoop/M < Flow).
@@ -60,17 +67,17 @@ def calculate_pof_analytics(current_depths, current_lengths, pressure, diameter,
     Args:
         current_depths (np.array): Mean depths (mm).
         current_lengths (np.array): Defect lengths (mm).
-        pressure (float): Operating pressure (MPa).
+        pressure (float): Operating pressure (psi).
         diameter (float): Pipe outer diameter (mm).
         thickness (float): Wall thickness (mm).
-        smys (float): Yield strength (MPa).
+        smys (float): Yield strength (psi).
         std_devs (np.array): Standard deviation of defect depth distribution (mm).
         
     Returns:
         np.array: Probability of Failure (0.0 to 1.0).
     """
     # 1. Properties
-    flow_stress = smys + 69.0 # B31G Modified standard
+    flow_stress = smys + 10000 # B31G Modified standard
     hoop_stress = calculate_hoop_stress(pressure, diameter, thickness)
     
     # 2. Geometry Factors

@@ -193,22 +193,28 @@ def main():
             
         with tab3:
             st.subheader("Detailed Results")
-            col_res1, col_res2 = st.columns([1,1])
-            with col_res1:
-                st.write("**Master Data (Inputs + ML)**")
-                st.dataframe(master_df, use_container_width=True)
-            with col_res2:
-                st.write("**POF Results (Output)**")
-                st.dataframe(pof_results, use_container_width=True)
             
-            # Export
-            csv = pof_results.to_csv(index=False).encode('utf-8')
+            # Show consolidated Master DataFrame (Input + Output)
+            st.write("**Master Data with POF Results**")
+            
+            # Remove start/end distance columns for visualization as requested
+            # We handle likely column names including those with '_m' suffix
+            drop_cols = [c for c in ['distancia_inicio_m', 'distancia_fin_m', 'distancia_inicio_m_resistividad', 'distancia_fin_m_resistividad', 'distancia_inicio_m_tipo_suelo', 'distancia_fin_m_tipo_suelo', 'distancia_inicio_m_potencial', 'distancia_fin_m_potencial', 'distancia_inicio_m_interferencia', 'distancia_fin_m_interferencia', 'distancia_inicio_m_tipo_recubrimiento', 'distancia_fin_m_tipo_recubrimiento', 'distancia_inicio_m_presion', 'distancia_fin_m_presion'] if c in master_df.columns]
+            
+            # Configure scientific notation for POF columns
+            pof_cols = [c for c in master_df.columns if 'POF_' in c]
+            column_config = {col: st.column_config.NumberColumn(format="%.2e") for col in pof_cols}
+            
+            st.dataframe(master_df.drop(columns=drop_cols), use_container_width=True, column_config=column_config)
+            
+            # Export Master DataFrame
+            csv = master_df.to_csv(index=False).encode('utf-8')
             st.download_button(
-                "Download POF Results CSV",
+                "Download Unified Results CSV",
                 csv,
-                "pof_results.csv",
+                "master_results_pof.csv",
                 "text/csv",
-                key='download-pof'
+                key='download-master'
             )
             
         with tab4:

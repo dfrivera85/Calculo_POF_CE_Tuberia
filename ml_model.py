@@ -74,7 +74,7 @@ class DefectDepthEstimator:
         Trains the Random Forest model using rows with known anomaly depths (depth > 0).
         """
         # Filter for training data: Joints where ILI extracted a depth > 0
-        train_df = df[df[self.target_col] > 0].copy()
+        train_df = df.copy()
         
         if train_df.empty:
             print("Warning: No training data available (no anomalies with depth > 0). Model not trained.")
@@ -96,7 +96,7 @@ class DefectDepthEstimator:
     def calculate_uncertainty(self, df):     
         return 0.10
 
-    def apply_physical_restrictions(self, predicted_depth_mm, detection_threshold_mm):
+    def apply_physical_restrictions(self, predicted_depth_mm, detection_threshold):
         """
         Applies censoring logic for simulation distribution parameters.
         
@@ -130,11 +130,11 @@ class DefectDepthEstimator:
         # Else: Mean = Prediction
         
         lower = 0
-        upper = detection_threshold_mm
+        upper = detection_threshold
         
         # Clamping the mean for the distribution
         if predicted_depth_mm >= upper:
-            mu = upper * 0.8 # Bias towards upper
+            mu = upper  # Bias towards upper
         elif predicted_depth_mm <= lower:
             mu = lower
         else:
