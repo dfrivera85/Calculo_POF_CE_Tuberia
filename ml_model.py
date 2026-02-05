@@ -5,7 +5,7 @@ from sklearn.preprocessing import LabelEncoder
 
 class DefectDepthEstimator:
     def __init__(self, random_state=42):
-        self.model = RandomForestRegressor(random_state=random_state, n_estimators=100)
+        self.model = RandomForestRegressor(random_state=random_state, n_estimators=1000)
         self.label_encoders = {}
         self.categorical_cols = ['tipo_suelo', 'tipo_recubrimiento']
         self.feature_cols = [

@@ -41,10 +41,11 @@ def run_simulation(dfs, ili_date, target_date, tolerances_df, detection_threshol
     
     # Train Model (on defects found by ILI)
     try:
-        estimator.train(master_df)
+        training_df = master_df[(master_df['profundidad_mm'].notna()) & (master_df['profundidad_mm'] > 0)]
+        estimator.train(training_df)
         
         # Calculate Model Uncertainty (Validation on Field Data)
-        ml_uncertainty_mm = estimator.calculate_uncertainty(master_df)
+        ml_uncertainty_mm = estimator.calculate_uncertainty(master_df) * master_df['espesor']
                     
         logging.info(f"ML Uncertainty (Std Dev): {ml_uncertainty_mm}")
         
