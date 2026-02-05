@@ -7,7 +7,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 REQUIRED_COLUMNS = {
     'juntas_soldadura.csv': ['distancia_inicio_m', 'distancia_fin_m', 'lat', 'lon', 'diametro', 'espesor', 'SMYS', 'tasa_corrosion_mm_ano'],
-    'anomalias.csv': ['distancia_m', 'profundidad_mm', 'ancho', 'largo', 'tipo_defecto'],
+    'anomalias.csv': ['distancia_m', 'profundidad_mm', 'ancho', 'largo', 'tipo_defecto', 'latitud', 'longitud'],
     'presion.csv': ['distancia_inicio_m', 'distancia_fin_m', 'presion'],
     'resistividad.csv': ['distancia_inicio_m', 'distancia_fin_m', 'resistividad_suelo_ohm_cm'],
     'tipo_suelo.csv': ['distancia_inicio_m', 'distancia_fin_m', 'tipo_suelo'],
@@ -132,6 +132,17 @@ def create_master_dataframe(dfs):
     anomalias_merged = anomalias_merged[
         anomalias_merged['distancia_m'] <= anomalias_merged['distancia_fin_m']
     ].copy()
+
+    # Combine coordinates: use 'lat'/'lon' from junta if 'latitud'/'longitud' from anomalia is missing
+    if 'latitud' not in anomalias_merged.columns:
+        anomalias_merged['latitud'] = pd.NA
+    if 'longitud' not in anomalias_merged.columns:
+        anomalias_merged['longitud'] = pd.NA
+
+    if 'lat' in anomalias_merged.columns:
+        anomalias_merged['latitud'] = anomalias_merged['latitud'].fillna(anomalias_merged['lat'])
+    if 'lon' in anomalias_merged.columns:
+        anomalias_merged['longitud'] = anomalias_merged['longitud'].fillna(anomalias_merged['lon'])
     
     # 3. Create "Clean Joint" segments (Dummy Anomalies for ML predictions later)
     # Identify joints that HAVE anomalies
@@ -152,6 +163,12 @@ def create_master_dataframe(dfs):
         # For the master DF, we need a 'distancia_m' column to sort everything linearly.
         # For a clean joint (segment), we can use its start point as the reference distance.
         clean_juntas['distancia_m'] = clean_juntas['distancia_inicio_m']
+
+        # Map 'lat'/'lon' to 'latitud'/'longitud' for consistency with anomalias
+        if 'lat' in clean_juntas.columns:
+             clean_juntas['latitud'] = clean_juntas['lat']
+        if 'lon' in clean_juntas.columns:
+             clean_juntas['longitud'] = clean_juntas['lon']
         
         # Combine
         master_df = pd.concat([anomalias_merged, clean_juntas], ignore_index=True)
