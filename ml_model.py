@@ -151,3 +151,16 @@ class DefectDepthEstimator:
             'mu': mu,
             'sigma': (upper - lower) / 4 # Rough approx to fit 2 sigma
         }
+
+    def explain_model(self, df):
+        """
+        Generates SHAP values for the provided dataframe.
+        """
+        import shap
+        X = self._prepare_data(df, training=False)
+        
+        # Use TreeExplainer optimized for Tree models
+        explainer = shap.Explainer(self.model)
+        shap_values = explainer(X)
+        
+        return shap_values

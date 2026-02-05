@@ -4,6 +4,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
 import io
+import shap
+import matplotlib.pyplot as plt
 
 # Import local modules
 import data_loader
@@ -220,33 +222,29 @@ def main():
         with tab4:
             st.subheader("ML Model Diagnostics")
             
+            shap_values = results.get('shap_values')
+            
             col_ml1, col_ml2 = st.columns(2)
             
             with col_ml1:
                 st.write(f"**ML Uncertainty (Std Dev):** {results.get('ml_uncertainty_status', 'N/A')}")
                 
-                # Parity Plot
-                # Filter rows where we have field data (validation set)
-                val_mask = (master_df['profundidad_campo_mm'].notna()) & (master_df['profundidad_campo_mm'] > 0)
-                val_df = master_df[val_mask]
-                
-                if not val_df.empty:
-                   fig_parity = px.scatter(
-                       val_df, 
-                       x='profundidad_campo_mm', 
-                       y='pred_depth_ml',
-                       title="Parity Plot: Field vs ML",
-                       labels={'profundidad_campo_mm': 'Field Measured Depth (mm)', 'pred_depth_ml': 'ML Predicted Depth (mm)'}
-                   )
-                   fig_parity.add_shape(type="line", line=dict(dash='dash'), x0=0, y0=0, x1=max(val_df['profundidad_campo_mm']), y1=max(val_df['profundidad_campo_mm']))
-                   st.plotly_chart(fig_parity, use_container_width=True)
+                if shap_values is not None:
+                    st.markdown("#### Global Interpretability (Beeswarm)")
+                    try:
+                        # Beeswarm plot
+                        fig_beeswarm, ax = plt.subplots()
+                        shap.plots.beeswarm(shap_values, show=False)
+                        st.pyplot(fig_beeswarm)
+                        plt.close(fig_beeswarm)
+                    except Exception as e:
+                        st.error(f"Error plotting Beeswarm: {e}")
                 else:
-                    st.info("No overlapping Field Data for Parity Plot.")
+                     st.info("SHAP values not available.")
                     
             with col_ml2:
-                # Feature Importance
                 if 'feature_importance' in results:
-                    st.write("**Feature Importance**")
+                    st.markdown("#### Feature Importance")
                     fi_df = results['feature_importance']
                     fig_fi = px.bar(fi_df, x='Importance', y='Feature', orientation='h')
                     st.plotly_chart(fig_fi, use_container_width=True)

@@ -76,6 +76,13 @@ def run_simulation(dfs, ili_date, target_date, tolerances_df, detection_threshol
             }).sort_values('Importance', ascending=False)
             results['feature_importance'] = feat_imp
 
+        # Generate SHAP values
+        try:
+            logging.info("Generating SHAP explanation...")
+            results['shap_values'] = estimator.explain_model(master_df)
+        except Exception as e:
+            logging.warning(f"SHAP explanation failed: {e}")
+
     except Exception as e:
         logging.error(f"ML Step Failed: {e}")
         # Continue with critical error or fallback?
